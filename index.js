@@ -16,7 +16,7 @@ $.fn.nextRelative = function nextRelative(selector) {
   return this.map(function nextRelativeSingle() {
     let $elem = $(this);
 
-    while (!$elem.is('body')) {
+    while ($elem.length) {
       const $nextCandidate = $elem.nextAll(selector).first();
       if ($nextCandidate.length) {
         return $nextCandidate.get(0);
