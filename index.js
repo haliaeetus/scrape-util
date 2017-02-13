@@ -52,23 +52,24 @@ function basicElementParser($elem) {
   return $elem.text().trim();
 }
 
-function parseElements($elems, keys, parser = basicElementParser) {
+function parseElements($elems, keys, parsers = {}, defaultParser = basicElementParser) {
   const result = {};
   _.each(keys, (index, key) => {
+    const parser = parsers[key] || defaultParser;
     result[key] = parser($elems.eq(index));
   });
   return result;
 }
 
-function parseTable($table, parseIndices, parser) {
+function parseTable($table, parseIndices, parsers, parser) {
   const $rows = $table.find('tbody').find('tr').slice(1);
 
   return $rows.toArray().map(row => {
-    return parseElements($(row).children(), parseIndices, parser);
+    return parseElements($(row).children(), parseIndices, parsers, parser);
   });
 }
 
-function parseTableAfterSentinel($html, selector, parseIndices) {
+function parseTableAfterSentinel($html, selector, parseIndices, parsers) {
   const $sentinel = $html.find(selector);
   if (!$sentinel.length) {
     throw new Error(`Sentinel ${selector} not found`);
@@ -78,8 +79,13 @@ function parseTableAfterSentinel($html, selector, parseIndices) {
     throw new Error(`No table found after ${selector}`);
   }
 
-  return parseTable($table, parseIndices);
+  return parseTable($table, parseIndices, parsers);
 }
+
+const logger = msg => data => {
+  console.log(msg);
+  return data;
+};
 
 module.exports = {
   renderFiles,
@@ -87,5 +93,6 @@ module.exports = {
   parseElements,
   parseTable,
   parseTableAfterSentinel,
+  logger
   $
 };
