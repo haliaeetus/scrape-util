@@ -39,15 +39,11 @@ function renderFiles(formatsFn, filePrefix, outputDir) {
   };
 }
 
-function getHTML(url, name, transform = $) {
+function getHTML(url, transform = $) {
   return () => {
-    console.log(`Retrieving ${name} content.`);
     return request({
       uri: url,
       transform
-    }).then(data => {
-      console.log(`Retrieved ${name} content.`);
-      return data;
     });
   };
 }
