@@ -1,0 +1,34 @@
+{
+  "name": "iso-3166",
+  "version": "0.1.0",
+  "description": "Utilities to assist in scraping HTML pages in NodeJS.",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "bluebird": "3.4.7",
+    "eslint": "3.15.0",
+    "eslint-config-airbnb": "14.1.0",
+    "eslint-plugin-import": "2.2.0",
+    "eslint-plugin-jsx-a11y": "4.0.0",
+    "eslint-plugin-react": "6.9.0",
+    "fs-extra": "2.0.0",
+    "jquery": "3.1.1",
+    "jsdom": "9.10.0",
+    "lodash": "4.17.4",
+    "request": "2.79.0",
+    "request-promise": "4.1.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haliaeetus/scrape-util.git"
+  },
+  "author": "Ben Martin <ben@benmartinstudios.com> (http://benmartinstudios.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/haliaeetus/scrape-util/issues"
+  },
+  "homepage": "https://github.com/haliaeetus/scrape-util#readme"
+}
