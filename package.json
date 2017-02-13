@@ -1,6 +1,6 @@
 {
-  "name": "iso-3166",
-  "version": "0.1.0",
+  "name": "scrape-util",
+  "version": "1.0.0",
   "description": "Utilities to assist in scraping HTML pages in NodeJS.",
   "main": "index.js",
   "dependencies": {},
