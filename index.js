@@ -93,6 +93,6 @@ module.exports = {
   parseElements,
   parseTable,
   parseTableAfterSentinel,
-  logger
+  logger,
   $
 };
