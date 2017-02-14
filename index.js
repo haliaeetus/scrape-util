@@ -1,4 +1,5 @@
 const path = require('path');
+const url = require('url');
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs-extra'));
 const request = require('request-promise');
@@ -9,6 +10,8 @@ const jsdom = require('jsdom').jsdom;
 const document = jsdom('<html></html>', {});
 const window = document.defaultView;
 const $ = require('jquery')(window);
+
+const iconv = require('iconv-lite');
 
 // search for single element matching selector
 // first search siblings after element, then siblings after element's parent, then grandparent, etc.
@@ -34,17 +37,21 @@ function renderFormat(outputDir, filePrefix) {
 
 function renderFiles(formatsFn, filePrefix, outputDir) {
   // eslint-disable-next-line arrow-body-style
-  return ({ data, headers }) => {
-    return Promise.map(formatsFn(data, headers), renderFormat(outputDir, filePrefix));
+  return (data) => {
+    return Promise.map(formatsFn(data), renderFormat(outputDir, filePrefix));
   };
 }
 
-function getHTML(url, transform = $) {
+function getHTML(url, { transform = $, encoding = 'utf8' }) {
   return () => {
     return request({
       uri: url,
-      transform
-    });
+      encoding: null
+    })
+    .then(res => {
+      return iconv.decode(new Buffer(res), encoding);
+    })
+    .then(transform);
   };
 }
 
@@ -69,30 +76,107 @@ function parseTable($table, parseIndices, parsers, parser) {
   });
 }
 
-function parseTableAfterSentinel($html, selector, parseIndices, parsers) {
-  const $sentinel = $html.find(selector);
-  if (!$sentinel.length) {
-    throw new Error(`Sentinel ${selector} not found`);
-  }
-  const $table = $sentinel.nextRelative('table');
-  if (!$table.length) {
-    throw new Error(`No table found after ${selector}`);
-  }
-
-  return parseTable($table, parseIndices, parsers);
-}
-
 const logger = msg => data => {
   console.log(msg);
   return data;
 };
+
+const libraries = {
+  $: {
+    transforms: {
+      init: () => $,
+      absolutifyUrls: (pageConfig) => {
+        return function absolutifyUrls($html) {
+          const baseUrl = pageConfig.url;
+          $html.find('a').each(function () {
+            const $elem = $(this);
+            const href = $elem.attr('href');
+            if (!href || href.charAt(0) === '#') {
+              return;
+            }
+            $elem.attr('href', url.resolve(baseUrl, href));
+          });
+
+          return $html;
+        };
+      }
+    },
+    parsers: {
+      table({ selector, parseIndices, parsers, rowParser, key }) {
+        return ($html) => {
+          const $table = selector($html);
+          const entries = parseTable($table, parseIndices, parsers).map(rowParser);
+          return key ? _.keyBy(entries, key) : entries;
+        };
+      }
+    }
+  }
+};
+
+function parseHtml(parserConfigs, library) {
+  const parsers = library.parsers;
+  return $html => {
+    return Promise.mapSeries(parserConfigs, parserConfig => {
+      const { name, type, options, postParse, preParse } = parserConfig;
+      const parser = type === 'custom' ? parserConfig.parser : parsers[type];
+      if (!parser) {
+        throw new Error(`No parser for ${type}`);
+      }
+
+      return Promise.resolve($html)
+      .then(data => {
+        return (preParse || _.identity)(data);
+      })
+      .then(parser(options))
+      .then(data => {
+        return (postParse || _.identity)(data);
+      })
+      .then(logger(`  Parsed ${name}`));
+    }).then(values => {
+      return _.zipObject(_.map(parserConfigs, 'id'), values);
+    });
+  };
+}
+
+function scrapePage(page) {
+  const library = libraries[page.libraryId || '$'];
+  // todo: abstract this
+  const transforms = libraries.$.transforms;
+  const { url, name, parsers, encoding, } = page;
+  console.log(`Requesting ${name} HTML`);
+  return getHTML(url, { encoding, transform: _.identity })()
+    .then(logger(`Retrieved ${name} HTML.`))
+    .then($html => {
+      let transforms = page.transforms;
+      if (!transforms) {
+        transforms = ['init'];
+      }
+
+      return transforms.reduce((transformee, transform) => {
+        if (_.isString(transform)) {
+          transform = library.transforms[transform];
+        }
+        return transform(page)(transformee);
+      }, $html);
+    })
+    .then(logger(`Transformed ${name} HTML`))
+    .then(parseHtml(parsers, library));
+}
+
+function scrapePages(pages) {
+  return Promise.mapSeries(pages, scrapePage)
+  .then(values => {
+    return _.zipObject(_.map(pages, 'id'), values);
+  });
+}
 
 module.exports = {
   renderFiles,
   getHTML,
   parseElements,
   parseTable,
-  parseTableAfterSentinel,
   logger,
+  scrapePages,
+  libraries,
   $
 };
