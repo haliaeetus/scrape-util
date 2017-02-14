@@ -1,6 +1,6 @@
 {
   "name": "scrape-util",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Utilities to assist in scraping HTML pages in NodeJS.",
   "main": "index.js",
   "dependencies": {
